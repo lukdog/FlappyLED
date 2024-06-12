@@ -5,6 +5,7 @@
 #include "flappy_animation.h"
 #include "crash_animation.h"
 #include "modes_animation.h"
+#include "intro_animation.h"
 
 //#define DEBUG 1
 
@@ -50,6 +51,7 @@ static int8_t wall_start_pix = 0, wall_pos_x = WIDTH-1, wall_size = 3;
 static uint16_t score = 0, neai_ptr = 0, time_to_wait = 50;
 static uint8_t gameMode = MENU;
 static float oldDistance = 0;
+static bool firstAnimationsRun = true;
 
 byte frame[8][12] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -91,6 +93,7 @@ void setup() {
   #if !defined(TOF_MODE) && !defined(ENCODER_MODE)
   game_ongoing = true;
   gameMode = 127;
+  digitalWrite(LED_BUILTIN, HIGH);
   #endif
 }
 
@@ -115,7 +118,7 @@ void loop() {
     #endif
 
     #ifdef ANIMATIONS
-    show_idle_animation();
+    show_idle_animation(true);
     #endif
 
     delay(500);
@@ -311,6 +314,7 @@ void distanceLoop() {
 /* Functions declaration ----------------------------------------------------------*/
 void introduction_message(){
   
+  #if !defined(ANIMATIONS)
   matrix.beginDraw();
   matrix.stroke(0xFFFFFFFF);
   matrix.textScrollSpeed(50);
@@ -323,26 +327,37 @@ void introduction_message(){
   matrix.endText(SCROLL_LEFT);
 
   matrix.endDraw();
+  #endif
+
+  #ifdef ANIMATIONS
+  show_idle_animation(false);
+  #endif
 
 }
 
 #ifdef ANIMATIONS
-void show_idle_animation(){
+void show_idle_animation(bool interrupt){
 
+  for(auto i:introAnimation){
+    if(interrupt && game_ongoing == true){break;}
+    matrix.loadFrame(i);
+    delay(90);
+  }
+  
   for(auto i:flappyAnimation){
-    if(game_ongoing == true){break;}
+    if(interrupt && game_ongoing == true){break;}
     matrix.loadFrame(i);
     delay(66);
   }
   
   for(auto i:crashAnimation){
-    if(game_ongoing == true){break;}
+    if(interrupt && game_ongoing == true){break;}
     matrix.loadFrame(i);
     delay(66);
   }
 
   for(auto i:modesAnimation){
-    if(game_ongoing == true){break;}
+    if(interrupt && game_ongoing == true){break;}
     matrix.loadFrame(i);
     delay(80);
   }
