@@ -2,6 +2,9 @@
 #include "Arduino_LED_Matrix.h"
 #include "Modulino.h"
 #include <Scheduler.h>
+#include "flappy_animation.h"
+#include "crash_animation.h"
+#include "modes_animation.h"
 
 //#define DEBUG 1
 
@@ -14,10 +17,11 @@
 #define MAX_TOF_H 400
 #define TOF_PRESENCE_TIME 2000
 
-/* Define modes */
+/* Enable Features */
 //#define BUTTONS 1
 #define ENCODER_MODE 1
 #define TOF_MODE 1
+#define ANIMATIONS 1
 
 /* Game Modes */
 #define MENU 0
@@ -83,6 +87,11 @@ void setup() {
   Scheduler.startLoop(distanceLoop);
   distanceSensor.begin();
   #endif
+
+  #if !defined(TOF_MODE) && !defined(ENCODER_MODE)
+  game_ongoing = true;
+  gameMode = 127;
+  #endif
 }
 
 void loop() {
@@ -104,6 +113,11 @@ void loop() {
     }
 
     #endif
+
+    #ifdef ANIMATIONS
+    show_idle_animation();
+    #endif
+
     delay(500);
   }
 
@@ -116,6 +130,7 @@ void loop() {
     for (uint8_t y = 0; y < HEIGHT; y++) {
       frame[y][0] = 0;
       frame[y][1] = 0;
+      frame[y][2] = 0;
     }
 
     /* Set wall position on the matrix using random */
@@ -126,8 +141,8 @@ void loop() {
       if (wall_move) {
         for (uint8_t y = 0; y < HEIGHT; y++) {
           frame[y][wall_pos_x] = (y >= wall_start_pix && y < wall_start_pix + wall_size) ?  0 : 1;
-          if (wall_pos_x < WIDTH - 2) {
-            frame[y][wall_pos_x + 2] = 0;
+          if (wall_pos_x < WIDTH - 3) {
+            frame[y][wall_pos_x + 3] = 0;
           }
         }
         wall_pos_x--;
@@ -140,11 +155,15 @@ void loop() {
       /* Adapt level */
       adapt_game_level();
 
+      #if defined(TOF_MODE) || defined(ENCODER_MODE)
+
       /* Check if player touch the wall */
-      if (frame[player_y][player_x] == frame[player_y][player_x + 1]) {
+      if (frame[player_y][player_x] == frame[player_y][player_x - 1]) {
         reset_global_variables();
         return;
       }
+
+      #endif
 
     } while (wall_pos_x >= 0);
     /* Increment score counter */
@@ -290,21 +309,45 @@ void distanceLoop() {
 }
 
 /* Functions declaration ----------------------------------------------------------*/
-void introduction_message()
-{
+void introduction_message(){
+  
   matrix.beginDraw();
   matrix.stroke(0xFFFFFFFF);
   matrix.textScrollSpeed(50);
 
   // add the text
-  const char text[] = " Flappy bird! ";
+  const char text[] = " Flappy LED! ";
   matrix.textFont(Font_5x7);
   matrix.beginText(0, 1, 0xFFFFFF);
   matrix.println(text);
   matrix.endText(SCROLL_LEFT);
 
   matrix.endDraw();
+
 }
+
+#ifdef ANIMATIONS
+void show_idle_animation(){
+
+  for(auto i:flappyAnimation){
+    if(game_ongoing == true){break;}
+    matrix.loadFrame(i);
+    delay(66);
+  }
+  
+  for(auto i:crashAnimation){
+    if(game_ongoing == true){break;}
+    matrix.loadFrame(i);
+    delay(66);
+  }
+
+  for(auto i:modesAnimation){
+    if(game_ongoing == true){break;}
+    matrix.loadFrame(i);
+    delay(80);
+  }
+}
+#endif
 
 void adapt_game_level()
 {
@@ -363,6 +406,13 @@ void reset_global_variables()
   memset(frame, 0, WIDTH * HEIGHT * sizeof(byte));
   player_x = PLAYER_X;
   player_y = PLAYER_Y;
+
+  /*print crash animation*/
+  for(auto i:crashAnimation){
+    matrix.loadFrame(i);
+    delay(66);
+  }
+
   print_score(score);
   /* Reset score after loosing the party */
   score = 0;
