@@ -17,12 +17,14 @@
 
 #define MAX_TOF_H 400
 #define TOF_PRESENCE_TIME 2000
+#define RESET_TIME_MS 1800000
 
 /* Enable Features */
 //#define BUTTONS 1
 #define ENCODER_MODE 1
 #define TOF_MODE 1
 #define ANIMATIONS 1
+#define RESET_TIME 1
 
 /* Game Modes */
 #define MENU 0
@@ -119,6 +121,12 @@ void loop() {
 
     #ifdef ANIMATIONS
     show_idle_animation(true);
+    #endif
+
+    #ifdef RESET_TIME
+    if(millis() > RESET_TIME_MS){
+      NVIC_SystemReset();
+    }
     #endif
 
     delay(500);
