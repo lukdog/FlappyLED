@@ -9,7 +9,7 @@
 
 //#define DEBUG 1
 
-/* Defines  ----------------------------------------------------------*/
+/* Defines */
 #define HEIGHT            8
 #define WIDTH             12
 #define PLAYER_X          1  //initial player position
@@ -22,6 +22,7 @@
 #define RESET_TIME_MS 1800000
 
 /* Enable Features */
+/* Disable the define to disable the related feature*/
 #define BUTTONS 1
 #define ENCODER_MODE 1
 #define TOF_MODE 1
@@ -33,12 +34,6 @@
 #define MENU 0
 #define ENCODER 1
 #define TOF 2
-
-/* Prototypes ----------------------------------------------------------*/
-void introduction_message(void);
-void adapt_game_level(void);
-void print_score(uint16_t game_score);
-void reset_global_variables(void);
 
 /* Objects */
 ArduinoLEDMatrix matrix;
@@ -74,7 +69,9 @@ byte frame[8][12] = {
 void setup() {
   // put your setup code here, to run once:
 
+  #ifdef DEBUG
   Serial.begin(115200);
+  #endif
 
   matrix.begin();
   Modulino.begin();
@@ -104,7 +101,7 @@ void setup() {
 
   #if !defined(TOF_MODE) && !defined(ENCODER_MODE)
   game_ongoing = true;
-  gameMode = 127;
+  gameMode = 127; //dummy value
   digitalWrite(LED_BUILTIN, HIGH);
   #endif
 }
@@ -502,12 +499,18 @@ void clear_text()
 
 void reset_global_variables()
 {
+
+  /* Reset game mode*/
   gameMode = MENU;
+
+  /*Reset Matrix*/
   memset(frame, 0, WIDTH * HEIGHT * sizeof(byte));
+
+  /*Reset Player position*/
   player_x = PLAYER_X;
   player_y = PLAYER_Y;
 
-  /*print crash animation*/
+  /*Print crash animation and sound*/
   uint8_t countF = 0;
   for(auto i:crashAnimation){
     matrix.loadFrame(i);
@@ -524,11 +527,12 @@ void reset_global_variables()
   }
 
   #ifdef BUTTONS
+  /*Switch buttons leds off*/
   buttons.setLeds(false, mute, false);
   #endif
 
   print_score(score);
-  /* Reset score after loosing the party */
+  /* Reset score after crash */
   score = 0;
   /* Reset wall position */
   wall_pos_x = WIDTH-1;
@@ -536,14 +540,14 @@ void reset_global_variables()
   wall_size = 3;
   /* Reset delay */
   time_to_wait = 50;
-  /*reset encoder*/
+  /*reset Encoder*/
   encoder.set(PLAYER_Y);
-  /*reset game mode*/
   
-  /*reset old distance for TOF sensor */
+  /*Reset old distance for TOF sensor */
   t_oldDistance = 0;
   oldDistance = 0;
 
+  /*Wait some time after finish*/
   delay(3000);
   clear_text();
   game_ongoing = 0;
