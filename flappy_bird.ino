@@ -195,7 +195,17 @@ void menuLoop () {
 
   if(buttons.isPressed(1)){
     mute = !mute;
-    buttons.setLeds(false, mute, false);
+    switch(gameMode){
+      case MENU:
+        buttons.setLeds(false, mute, false);
+        break;
+      case ENCODER:
+        buttons.setLeds(true, mute, false);
+        break;
+      case TOF:
+        buttons.setLeds(false, mute, true);
+        break;
+    }
     delay(300);
   }
   
@@ -210,10 +220,12 @@ void menuLoop () {
 
   if(buttons.isPressed(0)){
     gameMode = ENCODER;
+    buttons.setLeds(true, mute, false);
   } 
 
   if (buttons.isPressed(2)){
     gameMode = TOF;
+    buttons.setLeds(false, mute, true);
   }
 
   delay(1);
@@ -510,6 +522,10 @@ void reset_global_variables()
 
     countF++;
   }
+
+  #ifdef BUTTONS
+  buttons.setLeds(false, mute, false);
+  #endif
 
   print_score(score);
   /* Reset score after loosing the party */
