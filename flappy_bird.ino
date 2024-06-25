@@ -15,7 +15,9 @@
 #define PLAYER_X          1  //initial player position
 #define PLAYER_Y          4
 
-#define MAX_TOF_H 400
+#define MAX_TOF_H 500
+#define MIN_TOF_H 30
+#define TOF_TRESHOLD 35
 #define TOF_PRESENCE_TIME 2000
 #define RESET_TIME_MS 1800000
 
@@ -82,17 +84,18 @@ void setup() {
   #ifdef BUTTONS
   buttons.begin();
   buttons.setLeds(false, false, false);
+  Scheduler.startLoop(menuLoop);
   #endif
   
   #ifdef ENCODER_MODE
-  Scheduler.startLoop(playerLoop);
   encoder.begin();
   encoder.set(PLAYER_Y);
+  Scheduler.startLoop(playerLoop);
   #endif
 
   #ifdef TOF_MODE
-  Scheduler.startLoop(distanceLoop);
   distanceSensor.begin();
+  Scheduler.startLoop(distanceLoop);
   #endif
 
   #ifdef BUZZER
@@ -110,26 +113,8 @@ void loop() {
 
   while(gameMode == MENU){
     #ifdef DEBUG
-    Serial.println("Waiting for menu");
+    Serial.println("Waiting for game mode");
     #endif  
-
-    #ifdef BUTTONS
-    buttons.update();
-
-    if(buttons.isPressed(0)){
-      gameMode = ENCODER;
-    } 
-
-    if(buttons.isPressed(1)){
-      mute = !mute;
-      buttons.setLeds(false, mute, false);
-    }
-    
-    if (buttons.isPressed(2)){
-      gameMode = TOF;
-    }
-
-    #endif
 
     #ifdef ANIMATIONS
     show_idle_animation(true);
@@ -141,7 +126,7 @@ void loop() {
     }
     #endif
 
-    delay(500);
+    delay(200);
   }
 
   if (game_ongoing) {
@@ -204,6 +189,37 @@ void loop() {
 
 }
 
+void menuLoop () {
+
+  buttons.update();
+
+  if(buttons.isPressed(1)){
+    mute = !mute;
+    buttons.setLeds(false, mute, false);
+    delay(300);
+  }
+  
+  if(gameMode != MENU){
+    #ifdef DEBUG
+    Serial.println("mode selected, buttons disabled");
+    #endif
+
+    delay(1);
+    return;
+  }
+
+  if(buttons.isPressed(0)){
+    gameMode = ENCODER;
+  } 
+
+  if (buttons.isPressed(2)){
+    gameMode = TOF;
+  }
+
+  delay(1);
+
+}
+
 void playerLoop() {
 
   while(gameMode != ENCODER){
@@ -260,7 +276,7 @@ void distanceLoop() {
     float d = distanceSensor.get();
     unsigned long m = millis();
 
-    if(!isnan(d) && d < MAX_TOF_H){
+    if(!isnan(d) && d < MAX_TOF_H && d > MIN_TOF_H){
       #ifdef DEBUG
       Serial.println("MenuMode - something in front of the sensor");
       #endif
@@ -289,8 +305,6 @@ void distanceLoop() {
     delay(1);
   }
 
-  game_ongoing = 1;
-
   float distance = distanceSensor.get();
 
   if(isnan(distance)){
@@ -300,16 +314,21 @@ void distanceLoop() {
     delay(1);
     return;
   }
+
+  game_ongoing = 1;
   
   #ifdef DEBUG
   Serial.print("Distance: ");
   Serial.println(distance);
   #endif
 
-  if(distance > MAX_TOF_H){
+  if(distance > MAX_TOF_H || distance < MIN_TOF_H){
     #ifdef DEBUG
-    Serial.print("Distance discarded, Too HIGH!");
+    Serial.println("Distance discarded, OUT OF RANGE!");
     #endif
+
+    frame[player_y][player_x] = 1;
+    matrix.renderBitmap(frame, 8, 12);
     delay(1);
     return;
   }
@@ -323,16 +342,22 @@ void distanceLoop() {
 
     frame[player_y][player_x] = 0;
 
-    if(distance < oldDistance-25){
-      player_y++;
+    if(distance < oldDistance-TOF_TRESHOLD ){
       oldDistance = distance;
-    } else if(distance > oldDistance+25){
-      player_y--;
+      if(player_y < HEIGHT-1) {
+        player_y++;
+      }
+    } else if(distance > oldDistance+TOF_TRESHOLD ){
       oldDistance = distance;
+      if(player_y > 0) {
+        player_y--;
+      }
     }
 
-    if(player_y < 0){player_y=0;}
-    else if(player_y > HEIGHT-1) {player_y=HEIGHT-1;}
+    #ifdef DEBUG
+    Serial.print("Player Position Y: ");
+    Serial.println(player_y);
+    #endif
 
     frame[player_y][player_x] = 1;
     matrix.renderBitmap(frame, 8, 12);
@@ -395,6 +420,7 @@ void show_idle_animation(bool interrupt){
 }
 #endif
 
+#ifdef BUZZER
 void play_wall_sound(){
   if(!mute){
     buzzer.tone(200+score*5, time_to_wait*5);
@@ -409,6 +435,7 @@ void play_end_sound(uint8_t frame){
     delay(66);
   }
 }
+#endif
 
 void adapt_game_level()
 {
