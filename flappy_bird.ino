@@ -20,11 +20,12 @@
 #define RESET_TIME_MS 1800000
 
 /* Enable Features */
-//#define BUTTONS 1
+#define BUTTONS 1
 #define ENCODER_MODE 1
 #define TOF_MODE 1
 #define ANIMATIONS 1
 #define RESET_TIME 1
+#define BUZZER 1
 
 /* Game Modes */
 #define MENU 0
@@ -42,6 +43,7 @@ ArduinoLEDMatrix matrix;
 ModulinoKnob encoder;
 ModulinoDistance distanceSensor;
 ModulinoButtons buttons;
+ModulinoBuzzer buzzer;
 
 /* Global Variables */
 int game_ongoing = 0;
@@ -54,6 +56,7 @@ static uint16_t score = 0, neai_ptr = 0, time_to_wait = 50;
 static uint8_t gameMode = MENU;
 static float oldDistance = 0;
 static bool firstAnimationsRun = true;
+static bool mute = false;
 
 byte frame[8][12] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -78,7 +81,7 @@ void setup() {
 
   #ifdef BUTTONS
   buttons.begin();
-  buttons.setLeds(true, true, true);
+  buttons.setLeds(false, false, false);
   #endif
   
   #ifdef ENCODER_MODE
@@ -90,6 +93,10 @@ void setup() {
   #ifdef TOF_MODE
   Scheduler.startLoop(distanceLoop);
   distanceSensor.begin();
+  #endif
+
+  #ifdef BUZZER
+  buzzer.begin();
   #endif
 
   #if !defined(TOF_MODE) && !defined(ENCODER_MODE)
@@ -112,6 +119,11 @@ void loop() {
     if(buttons.isPressed(0)){
       gameMode = ENCODER;
     } 
+
+    if(buttons.isPressed(1)){
+      mute = !mute;
+      buttons.setLeds(false, mute, false);
+    }
     
     if (buttons.isPressed(2)){
       gameMode = TOF;
@@ -179,6 +191,11 @@ void loop() {
     } while (wall_pos_x >= 0);
     /* Increment score counter */
     score++;
+
+    #ifdef BUZZER
+    play_wall_sound();
+    #endif
+
     /* Reset wall position */
     wall_pos_x = WIDTH-1;
   }
@@ -199,9 +216,11 @@ void playerLoop() {
       continue; 
     }
 
+    #if !defined(BUTTONS)
     if(encoder.get() != PLAYER_Y){
       gameMode = ENCODER;
     }
+    #endif
 
     delay(1);
   }
@@ -236,6 +255,8 @@ void distanceLoop() {
       continue; 
     }
 
+    #if !defined(BUTTONS)
+
     float d = distanceSensor.get();
     unsigned long m = millis();
 
@@ -262,6 +283,8 @@ void distanceLoop() {
       oldDistance = 0;
       t_oldDistance = m;
     }
+
+    #endif
     
     delay(1);
   }
@@ -372,6 +395,21 @@ void show_idle_animation(bool interrupt){
 }
 #endif
 
+void play_wall_sound(){
+  if(!mute){
+    buzzer.tone(200+score*5, time_to_wait*5);
+  }
+}
+
+void play_end_sound(uint8_t frame){
+  if(!mute && frame < 4){
+    buzzer.tone(200+100*(4-frame), 200);
+    delay(200);
+  } else {
+    delay(66);
+  }
+}
+
 void adapt_game_level()
 {
   /* Adapt speed & hole size */
@@ -431,9 +469,19 @@ void reset_global_variables()
   player_y = PLAYER_Y;
 
   /*print crash animation*/
+  uint8_t countF = 0;
   for(auto i:crashAnimation){
     matrix.loadFrame(i);
+
+    #ifdef BUZZER
+    play_end_sound(countF);
+    #endif
+
+    #if !defined(BUZZER)
     delay(66);
+    #endif
+
+    countF++;
   }
 
   print_score(score);
