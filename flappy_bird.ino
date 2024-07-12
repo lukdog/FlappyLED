@@ -76,8 +76,6 @@ void setup() {
   matrix.begin();
   Modulino.begin();
   
-  introduction_message(); //display a message when starting
-
   #ifdef BUTTONS
   buttons.begin();
   buttons.setLeds(false, false, false);
@@ -97,6 +95,11 @@ void setup() {
 
   #ifdef BUZZER
   buzzer.begin();
+  pinMode(12, INPUT_PULLUP);
+  digitalWrite(12, HIGH);
+  if(!digitalRead(12)){
+    mute = true;
+  }
   #endif
 
   #if !defined(TOF_MODE) && !defined(ENCODER_MODE)
@@ -104,6 +107,8 @@ void setup() {
   gameMode = 127; //dummy value
   digitalWrite(LED_BUILTIN, HIGH);
   #endif
+
+  introduction_message(); //display a message when starting
 }
 
 void loop() {
