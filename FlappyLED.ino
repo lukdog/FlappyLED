@@ -57,7 +57,6 @@ static uint8_t gameMode = MENU;
 static float oldDistance = 0;
 static bool firstAnimationsRun = true;
 static bool mute = false;
-static int localRecord = 0;
 
 byte frame[8][12] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -73,8 +72,11 @@ byte frame[8][12] = {
 
 #ifdef BLE_SYNC
 /* BT Service and properties */
-BleSync ble("FlappyLed", "d4d1cb67-d83e-41b6-bfc9-95d25ca6a91d", 2);
+BleSync ble("FlappyLed", "d4d1cb67-d83e-41b6-bfc9-95d25ca6a91d", 5);
 BleSyncValue bleRecordEncoder("a3cd7bd3-4d6e-492f-9f18-f9bf181be541", BLERead | BLEWrite);
+BleSyncValue bleGamesEncoder("59802c1a-c0d8-4b35-9c6c-b258304e078b", BLERead | BLEWrite);
+BleSyncValue bleRecordTof("2380e50e-562d-4e46-aeaf-d73b9d258f73", BLERead | BLEWrite);
+BleSyncValue bleGamesTof("a8dd61cd-02b9-465b-8f6d-a185aa65bce0", BLERead | BLEWrite);
 BleSyncValue bleCounter("17a8a342-41bd-4dc0-98af-62d30a0d4432", BLERead | BLEWrite);
 #endif
 
@@ -126,6 +128,10 @@ void setup() {
   #ifdef BLE_SYNC
 
   ble.addValue(&bleRecordEncoder);
+  ble.addValue(&bleCounter);
+  ble.addValue(&bleGamesEncoder);
+  ble.addValue(&bleRecordTof);
+  ble.addValue(&bleGamesTof);
   ble.addValue(&bleCounter);
   ble.initBLE();
 
@@ -310,6 +316,11 @@ void distanceLoop() {
 
     #if !defined(BUTTONS)
 
+    if(!distanceSensor.available()){
+      delay(1);
+      continue;
+    }
+
     float d = distanceSensor.get();
     unsigned long m = millis();
 
@@ -340,6 +351,11 @@ void distanceLoop() {
     #endif
     
     delay(1);
+  }
+
+  if(!distanceSensor.available()){
+    delay(1);
+    return;
   }
 
   float distance = distanceSensor.get();
@@ -528,6 +544,23 @@ void clear_text()
 void reset_global_variables()
 {
 
+  #ifdef BLE_SYNC
+  /* Store local record */
+
+  if(gameMode == ENCODER) {
+    if(score > bleRecordEncoder.getValue()){
+      bleRecordEncoder.setValue(score);
+    }
+    bleGamesEncoder.setValue(bleGamesEncoder.getValue()+1);
+  } else if(gameMode == TOF) {
+    if(score > bleRecordTof.getValue()){
+      bleRecordTof.setValue(score);
+    }
+    bleGamesTof.setValue(bleGamesTof.getValue()+1);
+  }
+  bleCounter.setValue(bleCounter.getValue()+1);
+  #endif
+
   /* Reset game mode*/
   gameMode = MENU;
 
@@ -557,16 +590,6 @@ void reset_global_variables()
   #ifdef BUTTONS
   /*Switch buttons leds off*/
   buttons.setLeds(false, mute, false);
-  #endif
-
-  #ifdef BLE_SYNC
-  /* Store local record */
-  if(score > localRecord){
-    localRecord = score;
-    bleRecordEncoder.setValue(localRecord);
-  }
-
-  bleCounter.setValue(bleCounter.getValue()+1);
   #endif
 
   print_score(score);
