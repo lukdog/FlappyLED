@@ -6,6 +6,8 @@
 #include "crash_animation.h"
 #include "modes_animation.h"
 #include "intro_animation.h"
+#include <BleValueSync.h>
+
 
 //#define DEBUG 1
 
@@ -29,6 +31,7 @@
 #define ANIMATIONS 1
 #define RESET_TIME 1
 #define BUZZER 1
+#define BLE_SYNC 1
 
 /* Game Modes */
 #define MENU 0
@@ -54,6 +57,7 @@ static uint8_t gameMode = MENU;
 static float oldDistance = 0;
 static bool firstAnimationsRun = true;
 static bool mute = false;
+static int localRecord = 0;
 
 byte frame[8][12] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -66,6 +70,15 @@ byte frame[8][12] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
 
+
+#ifdef BLE_SYNC
+/* BT Service and properties */
+BleSync ble("FlappyLed", "d4d1cb67-d83e-41b6-bfc9-95d25ca6a91d", 2);
+BleSyncValue bleRecordEncoder("a3cd7bd3-4d6e-492f-9f18-f9bf181be541", BLERead | BLEWrite);
+BleSyncValue bleCounter("17a8a342-41bd-4dc0-98af-62d30a0d4432", BLERead | BLEWrite);
+#endif
+
+
 void setup() {
   // put your setup code here, to run once:
 
@@ -75,12 +88,8 @@ void setup() {
 
   matrix.begin();
   Modulino.begin();
-  
-  #ifdef BUTTONS
-  buttons.begin();
-  buttons.setLeds(false, false, false);
-  Scheduler.startLoop(menuLoop);
-  #endif
+
+  introduction_message(); //display a message when starting
   
   #ifdef ENCODER_MODE
   encoder.begin();
@@ -102,13 +111,27 @@ void setup() {
   }
   #endif
 
+  #ifdef BUTTONS
+  buttons.begin();
+  buttons.setLeds(false, mute, false);
+  Scheduler.startLoop(menuLoop);
+  #endif
+
   #if !defined(TOF_MODE) && !defined(ENCODER_MODE)
   game_ongoing = true;
   gameMode = 127; //dummy value
   digitalWrite(LED_BUILTIN, HIGH);
   #endif
 
-  introduction_message(); //display a message when starting
+  #ifdef BLE_SYNC
+
+  ble.addValue(&bleRecordEncoder);
+  ble.addValue(&bleCounter);
+  ble.initBLE();
+
+  #endif
+
+  
 }
 
 void loop() {
@@ -133,7 +156,7 @@ void loop() {
 
   if (game_ongoing) {
     if(score == 0){
-      delay(800);
+      delay(500);
     }
 
     /* Clean the last column of the matrix */
@@ -536,6 +559,16 @@ void reset_global_variables()
   buttons.setLeds(false, mute, false);
   #endif
 
+  #ifdef BLE_SYNC
+  /* Store local record */
+  if(score > localRecord){
+    localRecord = score;
+    bleRecordEncoder.setValue(localRecord);
+  }
+
+  bleCounter.setValue(bleCounter.getValue()+1);
+  #endif
+
   print_score(score);
   /* Reset score after crash */
   score = 0;
@@ -553,7 +586,14 @@ void reset_global_variables()
   oldDistance = 0;
 
   /*Wait some time after finish*/
-  delay(3000);
+  #if !defined(BLE_SYNC)
+  delay(4000);
+  #endif
+  
+  #ifdef BLE_SYNC
+  ble.sync(4000);
+  #endif
+
   clear_text();
   game_ongoing = 0;
 }
