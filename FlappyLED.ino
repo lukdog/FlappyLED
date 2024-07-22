@@ -6,6 +6,8 @@
 #include "crash_animation.h"
 #include "modes_animation.h"
 #include "intro_animation.h"
+#include <BleValueSync.h>
+
 
 //#define DEBUG 1 //Enable debug prints in Serial Monitor : 115200
 
@@ -30,6 +32,7 @@
 #define BUZZER        //Modulino Buzzer needed: play sounds while playing
 #define ANIMATIONS    //Enable Animations
 #define RESET_TIME    //Automatically reset after some time
+#define BLE_SYNC 1    //Enable BLE Sync
 
 /* Game Modes */
 /* It is the state of the game*/
@@ -55,6 +58,7 @@ static uint16_t score = 0, time_to_wait = 70;
 static uint8_t gameMode = MENU;
 static float tofOldDistance = 0;
 static bool mute = false;
+static int localRecord = 0;
 
 byte frame[8][12] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -66,6 +70,15 @@ byte frame[8][12] = {
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 };
+
+
+#ifdef BLE_SYNC
+/* BT Service and properties */
+BleSync ble("FlappyLed", "d4d1cb67-d83e-41b6-bfc9-95d25ca6a91d", 2);
+BleSyncValue bleRecordEncoder("a3cd7bd3-4d6e-492f-9f18-f9bf181be541", BLERead | BLEWrite);
+BleSyncValue bleCounter("17a8a342-41bd-4dc0-98af-62d30a0d4432", BLERead | BLEWrite);
+#endif
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -113,6 +126,15 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   #endif
 
+  #ifdef BLE_SYNC
+
+  ble.addValue(&bleRecordEncoder);
+  ble.addValue(&bleCounter);
+  ble.initBLE();
+
+  #endif
+
+  
 }
 
 void loop() {
@@ -137,7 +159,7 @@ void loop() {
 
   if (game_ongoing) {
     if(score == 0){
-      delay(800);
+      delay(500);
     }
 
     /* Remove the wall from the matrix */
@@ -550,6 +572,16 @@ void resetGameState()
   buttons.setLeds(false, mute, false);
   #endif
 
+  #ifdef BLE_SYNC
+  /* Store local record */
+  if(score > localRecord){
+    localRecord = score;
+    bleRecordEncoder.setValue(localRecord);
+  }
+
+  bleCounter.setValue(bleCounter.getValue()+1);
+  #endif
+
   print_score(score);
   score = 0;
   wall_pos_x = WIDTH-1;
@@ -564,7 +596,14 @@ void resetGameState()
   tofOldDistance = 0;
 
   /*Wait some time after finish*/
-  delay(3000);
+  #if !defined(BLE_SYNC)
+  delay(4000);
+  #endif
+  
+  #ifdef BLE_SYNC
+  ble.sync(4000);
+  #endif
+
   clear_text();
   game_ongoing = 0;
 }
