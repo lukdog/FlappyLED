@@ -11,8 +11,7 @@ FlappyLED is a modern take on the classic Flappy Bird game, designed to be playe
 - [Usage](#usage)
 - [Game Modes](#game-modes)
 - [Animations and Sounds](#animations-and-sounds)
-- [Contributing](#contributing)
-- [License](#license)
+- [Configuration](#configuration)
 
 ## Introduction
 
