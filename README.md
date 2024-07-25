@@ -1,129 +1,119 @@
-# Flappy LED Game
+# FlappyLED
 
-Welcome to Flappy LED, a fun and engaging game implemented on the LED matrix of the Arduino UNO R4. This game is designed as a demonstration for the Plug and Make kit of Arduino. Guide your LED through moving walls and try to achieve the highest score!
+FlappyLED is a modern take on the classic Flappy Bird game, designed to be played on the Arduino UNO R4 LED matrix. The game can be controlled using either a rotary knob or a distance sensor (TOF). This project is inspired by another project on [Arduino Projecthub](https://projecthub.arduino.cc/mad_mcu/how-to-play-flappy-bird-like-game-with-your-voice-e5b6eb).
 
-## Features
+## Table of Contents
 
-- **Menu Mode**: Select between different game control modes.
-- **Encoder Mode**: Control the LED bird using a rotary encoder.
-- **TOF Mode**: Control the LED bird using a Time-of-Flight distance sensor.
-- **Animations**: Enjoy cool animations during idle and game transitions.
-- **Buzzer Sounds**: Listen to sounds during gameplay (can be muted).
-- **Automatic Reset**: The game resets after a defined period of inactivity.
+- [Introduction](#introduction)
+- [Hardware Requirements](#hardware-requirements)
+- [Software Requirements](#software-requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Game Modes](#game-modes)
+- [Animations and Sounds](#animations-and-sounds)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Setup
+## Introduction
 
-### Required Libraries
+FlappyLED is a simple yet addictive game where you navigate a pixel (representing the bird) through a series of walls with gaps. The goal is to pass through as many walls as possible without crashing. You can control the bird's movement using a rotary knob or a distance sensor.
 
-- `ArduinoGraphics`
-- `Arduino_LED_Matrix`
-- `Modulino`
-- `Scheduler`
+## Hardware Requirements
 
-### Hardware Requirements
+To play FlappyLED, you'll need the following components from the Arduino Plug&Make kit:
 
-- Arduino UNO R4
-- Arduino LED Matrix
-- Modulino Knob (Rotary Encoder)
-- Modulino Distance Sensor (TOF)
-- Modulino Buttons
-- Modulino Buzzer
+- Arduino UNO R4 WIFI
+- Modulino Knob (for rotary control)
+- Modulino Distance Sensor (TOF) (for distance control)
+- Modulino Buttons (for mode selection and mute toggle)
+- Modulino Buzzer (for sound effects)
 
-### Connections
+## Software Requirements
 
-Ensure all hardware components are properly connected to the Arduino UNO R4 as per their respective instructions.
+- Arduino IDE
+- ArduinoGraphics library
+- Arduino_LED_Matrix library
+- Modulino library
+- Scheduler library
 
 ## Installation
 
-1. **Download and Install the Required Libraries:**
+1. **Clone the repository:**
+   ```sh
+   git clone https://github.com/lukdog/FlappyLED.git
+   ```
 
-   Use the Arduino Library Manager to install the required libraries listed above.
+2. **Open the Arduino IDE and load the `FlappyLED.ino` sketch.**
 
-2. **Upload the Code:**
+3. **Install the required libraries:**
+   - Go to `Sketch` > `Include Library` > `Manage Libraries`.
+   - Search for and install `ArduinoGraphics`, `Arduino_LED_Matrix`, `Modulino`, and `Scheduler`.
 
-   Upload the provided Flappy LED game code to your Arduino UNO R4.
+4. **Upload the sketch to your Arduino UNO R4:**
+   - Connect your Arduino UNO R4 to your computer.
+   - Select the correct board and port from `Tools` menu.
+   - Click the upload button.
+
+## Usage
+
+### Starting the Game
+
+1. **Power on your Arduino UNO R4.**
+2. **The LED matrix will display a welcome message.**
+3. **Use the buttons to select the game mode:**
+   - Press the left button (A) to play using the rotary knob.
+   - Press the right button (C) to play using the distance sensor.
+   - Press the middle button (B) to toggle mute.
+
+### Playing the Game
+
+#### Using the Rotary Knob
+- Rotate the knob to move the bird up and down.
+
+#### Using the Distance Sensor
+- Move your hand closer to or farther from the sensor to control the bird's vertical position.
 
 ## Game Modes
 
-### Menu Mode
+There are two main game modes in FlappyLED:
 
-In this mode, you can select the control method for the game.
+1. **Rotary Knob Mode:**
+   - Control the bird by rotating the knob.
 
-- **Press Button A** to select **Encoder Mode**.
-- **Press Button B** to toggle mute for the buzzer.
-- **Press Button C** to select **TOF Mode**.
+2. **Distance Sensor Mode:**
+   - Control the bird by moving your hand in front of the distance sensor.
 
-### Encoder Mode
+## Animations and Sounds
 
-Control the LED bird using the rotary encoder. Rotate the knob to move the bird up or down.
+FlappyLED includes various animations and sound effects to enhance the gaming experience:
 
-### TOF Mode
+- **Welcome Message and Idle Animation:** Displayed when the game starts or is in the menu mode.
+- **Flappy Animation:** Played during the game.
+- **Crash Animation:** Displayed when the bird crashes into a wall.
+- **Mode Selection Animation:** Helps in choosing the game mode.
+- **Sound Effects:** Played during game events like passing through walls or crashing. These can be muted using the middle button.
 
-Control the LED bird using the TOF distance sensor. Move your hand closer or farther from the sensor to move the bird up or down.
+## Configuration
 
-## Game Play
+You can enable or disable specific features by modifying the `#define` statements in the code. Here are the available options:
 
-1. **Start the Game:**
+- **BUTTONS**: Enable the use of buttons for selecting game modes and toggling mute. If disabled, the game will automatically start if a rotation is performed on the knob or if a presence is noticed in front of the distance sensor.
+- **ENCODER_MODE**: Enable the rotary knob mode for controlling the bird.
+- **TOF_MODE**: Enable the distance sensor mode for controlling the bird.
+- **BUZZER**: Enable sound effects using the buzzer.
+- **ANIMATIONS**: Enable animations for welcome message, game events, and mode selection.
+- **RESET_TIME**: If enabled, automatically reset the game after a certain period of inactivity.
 
-   Once you select a mode, the game starts automatically.
+To disable a feature, simply comment out the corresponding `#define` line in the code. For example, to disable the use of buttons, change:
 
-2. **Control the Bird:**
+```cpp
+#define BUTTONS
+```
 
-   Use the selected control method to navigate the bird through moving walls.
+to:
 
-3. **Score Points:**
+```cpp
+// #define BUTTONS
+```
 
-   Successfully navigate through the gaps in the walls to score points. The game speed and difficulty increase as you score more points.
-
-4. **Game Over:**
-
-   The game ends if the bird collides with a wall. Your final score will be displayed, and the game will reset.
-
-## Code Explanation
-
-The provided code consists of various functions and classes that manage the game logic, controls, and display animations. Here's a brief overview of the main sections:
-
-### Global Variables
-
-- **Game Settings:** Define the game settings like height, width, initial player position, and other game parameters.
-- **Game Objects:** Create instances of the required components like LED matrix, encoder, distance sensor, buttons, and buzzer.
-- **Game State:** Track the game state variables such as score, player position, and game mode.
-
-### Setup Function
-
-Initializes the game components, starts the required loops for menu and control modes, and displays the introduction message.
-
-### Loop Function
-
-Handles the main game logic, including wall movement, collision detection, and score updating.
-
-### Control Loops
-
-- **menuLoop:** Manages the menu navigation and mode selection.
-- **playerLoop:** Handles the player movement in Encoder Mode.
-- **distanceLoop:** Handles the player movement in TOF Mode.
-
-### Auxiliary Functions
-
-- **introduction_message:** Displays the introduction message or animation.
-- **show_idle_animation:** Displays idle animations when the game is in the menu mode.
-- **play_wall_sound:** Plays sound when the bird successfully navigates through a wall.
-- **play_end_sound:** Plays sound when the game ends.
-- **adapt_game_level:** Adjusts the game difficulty based on the score.
-- **print_score:** Displays the final score after game over.
-- **clear_text:** Clears the text from the LED matrix.
-- **reset_global_variables:** Resets all game variables after game over.
-
-## Customization
-
-Feel free to modify the game settings, animations, and sounds to customize the game experience. You can adjust the difficulty levels, wall size, and other parameters as per your preference.
-
-## License
-
-This project is open-source and licensed under the MIT License. You are free to use, modify, and distribute the code as long as proper credit is given to the original author.
-
-## Inspiration
-
-This project has been inspired by a similar project on Arduino Project Hub: [How to Play Flappy Bird Like Game with Your Voice](https://projecthub.arduino.cc/mad_mcu/how-to-play-flappy-bird-like-game-with-your-voice-e5b6eb).
-
-Enjoy playing Flappy LED on your Arduino UNO R4!
+Enjoy playing FlappyLED! Happy flying!

@@ -7,52 +7,53 @@
 #include "modes_animation.h"
 #include "intro_animation.h"
 
-//#define DEBUG 1
+//#define DEBUG 1 //Enable debug prints in Serial Monitor : 115200
 
 /* Defines */
-#define HEIGHT            8
-#define WIDTH             12
-#define PLAYER_X          1  //initial player position
-#define PLAYER_Y          4
+#define HEIGHT 8
+#define WIDTH 12
+#define PLAYER_X 1
+#define PLAYER_Y 4
+#define RESET_TIME_MS 1800000
 
+/* TOF Configuration */
 #define MAX_TOF_H 500
 #define MIN_TOF_H 30
 #define TOF_TRESHOLD 35
 #define TOF_PRESENCE_TIME 2000
-#define RESET_TIME_MS 1800000
 
 /* Enable Features */
 /* Disable the define to disable the related feature*/
-#define BUTTONS 1
-#define ENCODER_MODE 1
-#define TOF_MODE 1
-#define ANIMATIONS 1
-#define RESET_TIME 1
-#define BUZZER 1
+#define BUTTONS       //Modulino button needed: select the game mode and toggle mute. 
+#define ENCODER_MODE  //Modulino Knob needed: rotate to move the led while playing
+#define TOF_MODE      //Modulino Distance needed: move the hand in front of the sensor to move the led while playing
+#define BUZZER        //Modulino Buzzer needed: play sounds while playing
+#define ANIMATIONS    //Enable Animations
+#define RESET_TIME    //Automatically reset after some time
 
 /* Game Modes */
-#define MENU 0
-#define ENCODER 1
-#define TOF 2
+/* It is the state of the game*/
+#define MENU 0    //No Game mode selected
+#define ENCODER 1 //Playing with Encoder
+#define TOF 2     //Playing with TOF
 
-/* Objects */
+/* Matrix & Modulinos */
 ArduinoLEDMatrix matrix;
 ModulinoKnob encoder;
 ModulinoDistance distanceSensor;
 ModulinoButtons buttons;
 ModulinoBuzzer buzzer;
 
-/* Global Variables */
+/* Variables */
 int game_ongoing = 0;
-unsigned long t_oldDistance = 0;
+unsigned long tofOldDistanceTime = 0;
 static byte wall_move = false;
 static int8_t player_move = 0;
 static uint8_t player_x = PLAYER_X, player_y = PLAYER_Y;
-static int8_t wall_start_pix = 0, wall_pos_x = WIDTH-1, wall_size = 3;
-static uint16_t score = 0, neai_ptr = 0, time_to_wait = 50;
+static int8_t holeStartX = 0, wall_pos_x = WIDTH-1, holeSize = 3;
+static uint16_t score = 0, time_to_wait = 70;
 static uint8_t gameMode = MENU;
-static float oldDistance = 0;
-static bool firstAnimationsRun = true;
+static float tofOldDistance = 0;
 static bool mute = false;
 
 byte frame[8][12] = {
@@ -75,6 +76,7 @@ void setup() {
 
   matrix.begin();
   Modulino.begin();
+  welcomeMessage();
   
   #ifdef BUTTONS
   buttons.begin();
@@ -97,6 +99,9 @@ void setup() {
   buzzer.begin();
   pinMode(12, INPUT_PULLUP);
   digitalWrite(12, HIGH);
+
+  /*Start with MUTE status instead of Unmuted*/
+  /*In order to start with mute = true, it is wnough to add a Jumper between GND and PIN 12*/
   if(!digitalRead(12)){
     mute = true;
   }
@@ -108,7 +113,6 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   #endif
 
-  introduction_message(); //display a message when starting
 }
 
 void loop() {
@@ -119,7 +123,7 @@ void loop() {
     #endif  
 
     #ifdef ANIMATIONS
-    show_idle_animation(true);
+    showIdleAnimation(true);
     #endif
 
     #ifdef RESET_TIME
@@ -136,21 +140,21 @@ void loop() {
       delay(800);
     }
 
-    /* Clean the last column of the matrix */
+    /* Remove the wall from the matrix */
     for (uint8_t y = 0; y < HEIGHT; y++) {
       frame[y][0] = 0;
       frame[y][1] = 0;
       frame[y][2] = 0;
     }
 
-    /* Set wall position on the matrix using random */
-    wall_start_pix = random(0, 5);
+    /* Set the Hole position */
+    holeStartX = random(0, HEIGHT-holeSize-1);
 
-    /* Move the wall through matrix */
+    /* Move the wall from right to left */
     do {
       if (wall_move) {
         for (uint8_t y = 0; y < HEIGHT; y++) {
-          frame[y][wall_pos_x] = (y >= wall_start_pix && y < wall_start_pix + wall_size) ?  0 : 1;
+          frame[y][wall_pos_x] = (y >= holeStartX && y < holeStartX + holeSize) ?  0 : 1;
           if (wall_pos_x < WIDTH - 3) {
             frame[y][wall_pos_x + 3] = 0;
           }
@@ -159,17 +163,17 @@ void loop() {
       }
       wall_move = !wall_move;
 
-      /* Update display */
+      /* Update Matrix */
       matrix.renderBitmap(frame, HEIGHT, WIDTH);
 
       /* Adapt level */
-      adapt_game_level();
+      adaptLevel();
 
       #if defined(TOF_MODE) || defined(ENCODER_MODE)
 
       /* Check if player touch the wall */
       if (frame[player_y][player_x] == frame[player_y][player_x - 1]) {
-        reset_global_variables();
+        resetGameState();
         return;
       }
 
@@ -180,7 +184,7 @@ void loop() {
     score++;
 
     #ifdef BUZZER
-    play_wall_sound();
+    playWallSound();
     #endif
 
     /* Reset wall position */
@@ -294,24 +298,24 @@ void distanceLoop() {
       #ifdef DEBUG
       Serial.println("MenuMode - something in front of the sensor");
       #endif
-      if(oldDistance != 0 && ((m - t_oldDistance) > TOF_PRESENCE_TIME)){
+      if(tofOldDistance != 0 && ((m - tofOldDistanceTime) > TOF_PRESENCE_TIME)){
         #ifdef DEBUG
         Serial.println("MenuMode - something in front of the sensor for 5 seconds");
         #endif
         gameMode = TOF;
-      } else if(oldDistance == 0) {
+      } else if(tofOldDistance == 0) {
         #ifdef DEBUG
         Serial.println("MenuMode - starting to count seconds");
         #endif
-        oldDistance = d;
-        t_oldDistance = m;
+        tofOldDistance = d;
+        tofOldDistanceTime = m;
       }
     } else {
       #ifdef DEBUG
         Serial.println("MenuMode - Nothing in front of the sensor");
       #endif
-      oldDistance = 0;
-      t_oldDistance = m;
+      tofOldDistance = 0;
+      tofOldDistanceTime = m;
     }
 
     #endif
@@ -347,8 +351,8 @@ void distanceLoop() {
     return;
   }
 
-  if(oldDistance == 0){
-    oldDistance = distance;
+  if(tofOldDistance == 0){
+    tofOldDistance = distance;
     game_ongoing = 1;
     delay(1);
     return;
@@ -356,13 +360,13 @@ void distanceLoop() {
 
     frame[player_y][player_x] = 0;
 
-    if(distance < oldDistance-TOF_TRESHOLD ){
-      oldDistance = distance;
+    if(distance < tofOldDistance-TOF_TRESHOLD ){
+      tofOldDistance = distance;
       if(player_y < HEIGHT-1) {
         player_y++;
       }
-    } else if(distance > oldDistance+TOF_TRESHOLD ){
-      oldDistance = distance;
+    } else if(distance > tofOldDistance+TOF_TRESHOLD ){
+      tofOldDistance = distance;
       if(player_y > 0) {
         player_y--;
       }
@@ -382,7 +386,7 @@ void distanceLoop() {
 }
 
 /* Functions declaration ----------------------------------------------------------*/
-void introduction_message(){
+void welcomeMessage(){
   
   #if !defined(ANIMATIONS)
   matrix.beginDraw();
@@ -400,13 +404,13 @@ void introduction_message(){
   #endif
 
   #ifdef ANIMATIONS
-  show_idle_animation(false);
+  showIdleAnimation(false);
   #endif
 
 }
 
 #ifdef ANIMATIONS
-void show_idle_animation(bool interrupt){
+void showIdleAnimation(bool interrupt){
 
   for(auto i:introAnimation){
     if(interrupt && game_ongoing == true){break;}
@@ -435,13 +439,13 @@ void show_idle_animation(bool interrupt){
 #endif
 
 #ifdef BUZZER
-void play_wall_sound(){
+void playWallSound(){
   if(!mute){
     buzzer.tone(200+score*5, time_to_wait*5);
   }
 }
 
-void play_end_sound(uint8_t frame){
+void playEndSound(uint8_t frame){
   if(!mute && frame < 4){
     buzzer.tone(200+100*(4-frame), 200);
     delay(200);
@@ -451,9 +455,9 @@ void play_end_sound(uint8_t frame){
 }
 #endif
 
-void adapt_game_level()
+/* The idea is to increese the speed or reduce the hole size every 5 points */
+void adaptLevel()
 {
-  /* Adapt speed & hole size */
   if (score < 5) {
     time_to_wait = 70;
   }
@@ -464,13 +468,13 @@ void adapt_game_level()
     time_to_wait = 40;
   }
   else if (score >= 15 && score < 20) {
-    wall_size = 2;
+    holeSize = 2;
   }
   else if (score >= 20 && score < 25) {
     time_to_wait = 30;
   }
   else {
-    wall_size = 1;
+    holeSize = 1;
   }
   delay(time_to_wait);
 }
@@ -502,7 +506,7 @@ void clear_text()
   matrix.endDraw();
 }
 
-void reset_global_variables()
+void resetGameState()
 {
 
   /* Reset game mode*/
@@ -521,7 +525,7 @@ void reset_global_variables()
     matrix.loadFrame(i);
 
     #ifdef BUZZER
-    play_end_sound(countF);
+    playEndSound(countF);
     #endif
 
     #if !defined(BUZZER)
@@ -537,20 +541,17 @@ void reset_global_variables()
   #endif
 
   print_score(score);
-  /* Reset score after crash */
   score = 0;
-  /* Reset wall position */
   wall_pos_x = WIDTH-1;
-  /* Reset wall size */
-  wall_size = 3;
-  /* Reset delay */
-  time_to_wait = 50;
-  /*reset Encoder*/
+  holeSize = 3;
+  time_to_wait = 70;
+
+  /*Reset encoder value*/
   encoder.set(PLAYER_Y);
   
   /*Reset old distance for TOF sensor */
-  t_oldDistance = 0;
-  oldDistance = 0;
+  tofOldDistanceTime = 0;
+  tofOldDistance = 0;
 
   /*Wait some time after finish*/
   delay(3000);
