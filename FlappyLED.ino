@@ -291,13 +291,12 @@ void distanceLoop() {
 
     #if !defined(BUTTONS)
 
-    float d = distanceSensor.get();
-
     if(!distanceSensor.available()){
       delay(1);
       continue;
     }
 
+    float d = distanceSensor.get();
     unsigned long m = millis();
 
     if(!isnan(d) && d < MAX_TOF_H && d > MIN_TOF_H){
@@ -329,12 +328,12 @@ void distanceLoop() {
     delay(1);
   }
 
-  float distance = distanceSensor.get();
-
   if(!distanceSensor.available()){
     delay(1);
     return;
   }
+
+  float distance = distanceSensor.get();
 
   if(isnan(distance)){
     #ifdef DEBUG
