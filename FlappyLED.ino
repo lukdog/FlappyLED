@@ -78,12 +78,6 @@ void setup() {
   Modulino.begin();
   welcomeMessage();
   
-  #ifdef BUTTONS
-  buttons.begin();
-  buttons.setLeds(false, false, false);
-  Scheduler.startLoop(menuLoop);
-  #endif
-  
   #ifdef ENCODER_MODE
   encoder.begin();
   encoder.set(PLAYER_Y);
@@ -105,6 +99,12 @@ void setup() {
   if(!digitalRead(12)){
     mute = true;
   }
+  #endif
+
+  #ifdef BUTTONS
+  buttons.begin();
+  buttons.setLeds(false, mute, false);
+  Scheduler.startLoop(menuLoop);
   #endif
 
   #if !defined(TOF_MODE) && !defined(ENCODER_MODE)
@@ -292,6 +292,12 @@ void distanceLoop() {
     #if !defined(BUTTONS)
 
     float d = distanceSensor.get();
+
+    if(!distanceSensor.available()){
+      delay(1);
+      continue;
+    }
+
     unsigned long m = millis();
 
     if(!isnan(d) && d < MAX_TOF_H && d > MIN_TOF_H){
@@ -324,6 +330,11 @@ void distanceLoop() {
   }
 
   float distance = distanceSensor.get();
+
+  if(!distanceSensor.available()){
+    delay(1);
+    return;
+  }
 
   if(isnan(distance)){
     #ifdef DEBUG
