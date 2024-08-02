@@ -24,10 +24,10 @@
 
 /* Enable Features */
 /* Disable the define to disable the related feature*/
-#define BUTTONS       //Modulino button needed: select the game mode and toggle mute. 
+//#define BUTTONS       //Modulino button needed: select the game mode and toggle mute. 
 #define ENCODER_MODE  //Modulino Knob needed: rotate to move the led while playing
 #define TOF_MODE      //Modulino Distance needed: move the hand in front of the sensor to move the led while playing
-#define BUZZER        //Modulino Buzzer needed: play sounds while playing
+//#define BUZZER        //Modulino Buzzer needed: play sounds while playing
 #define ANIMATIONS    //Enable Animations
 #define RESET_TIME    //Automatically reset after some time
 

@@ -10,7 +10,7 @@ FlappyLED is a modern take on the classic Flappy Bird game, designed to be playe
 - [Installation](#installation)
 - [Usage](#usage)
 - [Game Modes](#game-modes)
-- [Animations and Sounds](#animations-and-sounds)
+- [Animations](#animations)
 - [Configuration](#configuration)
 
 ## Introduction
@@ -59,10 +59,7 @@ To play FlappyLED, you'll need the following components from the Arduino Plug&Ma
 
 1. **Power on your Arduino UNO R4.**
 2. **The LED matrix will display a welcome message.**
-3. **Use the buttons to select the game mode:**
-   - Press the left button (A) to play using the rotary knob.
-   - Press the right button (C) to play using the distance sensor.
-   - Press the middle button (B) to toggle mute.
+3. **Use the rotary knob or move your hand in front of the distance sensor to start the game**
 
 ### Playing the Game
 
@@ -82,37 +79,23 @@ There are two main game modes in FlappyLED:
 2. **Distance Sensor Mode:**
    - Control the bird by moving your hand in front of the distance sensor.
 
-## Animations and Sounds
+## Animations
 
-FlappyLED includes various animations and sound effects to enhance the gaming experience:
+FlappyLED includes various animations ato enhance the gaming experience:
 
 - **Welcome Message and Idle Animation:** Displayed when the game starts or is in the menu mode.
 - **Flappy Animation:** Played during the game.
 - **Crash Animation:** Displayed when the bird crashes into a wall.
 - **Mode Selection Animation:** Helps in choosing the game mode.
-- **Sound Effects:** Played during game events like passing through walls or crashing. These can be muted using the middle button.
 
 ## Configuration
 
 You can enable or disable specific features by modifying the `#define` statements in the code. Here are the available options:
 
-- **BUTTONS**: Enable the use of buttons for selecting game modes and toggling mute. If disabled, the game will automatically start if a rotation is performed on the knob or if a presence is noticed in front of the distance sensor.
+
 - **ENCODER_MODE**: Enable the rotary knob mode for controlling the bird.
 - **TOF_MODE**: Enable the distance sensor mode for controlling the bird.
-- **BUZZER**: Enable sound effects using the buzzer.
 - **ANIMATIONS**: Enable animations for welcome message, game events, and mode selection.
 - **RESET_TIME**: If enabled, automatically reset the game after a certain period of inactivity.
-
-To disable a feature, simply comment out the corresponding `#define` line in the code. For example, to disable the use of buttons, change:
-
-```cpp
-#define BUTTONS
-```
-
-to:
-
-```cpp
-// #define BUTTONS
-```
 
 Enjoy playing FlappyLED! Happy flying!
